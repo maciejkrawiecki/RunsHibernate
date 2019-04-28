@@ -5,17 +5,20 @@ import maciejkrawiecki.entity.Member;
 import maciejkrawiecki.utils.HibernateUtils;
 import org.hibernate.Session;
 
+import javax.persistence.NoResultException;
 import java.util.List;
+import java.util.Optional;
 
 public class MemberDaoImpl implements MemberDao {
 
     @Override
-    public void save(Member run) {
-
+    public Long save(Member saveMember) {
         Session session = HibernateUtils.getSession();
-        session.saveOrUpdate(run);
+        Long memberId = (Long) session.save(saveMember);
         session.getTransaction().commit();
         session.close();
+
+        return memberId;
     }
 
     @Override
@@ -32,31 +35,33 @@ public class MemberDaoImpl implements MemberDao {
     }
 
     @Override
-    public Member getBy(Long id) {
+    public Optional<Member> getBy(Long id) {
 
         Session session = HibernateUtils.getSession();
+        Optional<Member> optionalMember;
+        Member member;
+        try {
+            member = (Member) session.createQuery("from Member where id=:id")
+                    .setParameter("id", id)
+                    .getSingleResult();
+            optionalMember = Optional.of(member);
+            session.getTransaction().commit();
+        } catch (NoResultException e) {
+            optionalMember = Optional.empty();
+        } finally {
+            session.close();
+        }
 
-
-        Member member = (Member) session.createQuery("from Member where id=:id")
-                .setParameter("id", id)
-                .getSingleResult();
-
-        session.getTransaction().commit();
-        session.close();
-
-        return member;
+        return optionalMember;
     }
 
     @Override
     public List<Member> getAll() {
 
         Session session = HibernateUtils.getSession();
-
         List members = session.createQuery("from Member").list();
-
         session.getTransaction().commit();
         session.close();
-
         return members;
     }
 }
